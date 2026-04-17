@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+
+  "sounds_directory": ".claude/sounds",
+
+  "hooks": {
+    "task_done": {
+      "enabled": true,
+      "sound": "task-completed.mp3"
+    },
+    "permission_needed": {
+      "enabled": true,
+      "sound": "approval-required.mp3"
+    },
+    "task_failed": {
+      "enabled": true,
+      "sound": "task-failed.mp3"
+    }
+  }
+}
