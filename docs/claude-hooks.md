@@ -109,8 +109,6 @@ These hooks (`Stop`, `StopFailure`, `PermissionRequest`) provide desktop notific
 |-----|--------|
 | `enabled` | Enables/disables logging |
 | `store_directory` | Where logs are stored (default `work-logs/`) |
-| `max_sessions` | Max completed sessions retained |
-| `max_bullets` | Reserved / legacy (summary-bullet helpers in utils; session logging uses `session_logs`) |
 | `stale_session_days` | Auto-close inactive sessions |
 | `temp_session_id_log` | Optional debug logging for session IDs (see config comments if present) |
 

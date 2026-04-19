@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
 const {
   loadTrackerConfig,
   resolveStoreFileForToday,
@@ -10,27 +9,15 @@ const {
   findOpenSessionIndex,
   findLastSessionIndexById,
   closeStaleOpenSessions,
-  trimOldSessions,
   cleanupOrphanedTmpFiles,
   getBranchName,
   getProjectName,
   resolveProjectPath,
+  readStdinJson,
 } = require("./session-tracker-utils");
 
-function readStdinJson() {
-  try {
-    const raw = fs.readFileSync(0, "utf8");
-    return raw.trim() ? JSON.parse(raw) : {};
-  } catch (err) {
-    if (process.env.DEBUG) {
-      process.stderr.write(`[session-start] stdin parse error: ${err.message}\n`);
-    }
-    return {};
-  }
-}
-
 function main() {
-  const input = readStdinJson();
+  const input = readStdinJson("session-start");
   const config = loadTrackerConfig();
 
   if (!isSessionTrackingEnabled(config)) {
@@ -52,13 +39,9 @@ function main() {
     store.sessions,
     config?.session_tracking?.stale_session_days,
   );
-  const trimmed = trimOldSessions(
-    store.sessions,
-    config?.session_tracking?.max_sessions,
-  );
-  if ((staleClosed || trimmed) && process.env.DEBUG) {
+  if (staleClosed && process.env.DEBUG) {
     process.stderr.write(
-      `[session-start] housekeeping: closed ${staleClosed} stale, trimmed ${trimmed} old sessions\n`,
+      `[session-start] housekeeping: closed ${staleClosed} stale sessions\n`,
     );
   }
 

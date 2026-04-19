@@ -17,6 +17,42 @@ function rmrf(dir) {
 }
 
 // =============================================================================
+// Hook stdin / duration helpers
+// =============================================================================
+describe("parseIsoMs", () => {
+  it("parses valid ISO strings", () => {
+    const iso = "2026-01-01T00:00:00.000Z";
+    assert.equal(utils.parseIsoMs(iso), Date.parse(iso));
+  });
+
+  it("returns null for invalid input", () => {
+    assert.equal(utils.parseIsoMs(null), null);
+    assert.equal(utils.parseIsoMs(""), null);
+    assert.equal(utils.parseIsoMs("not-a-date"), null);
+  });
+});
+
+describe("computeDuration", () => {
+  it("returns minutes between two valid timestamps", () => {
+    assert.equal(
+      utils.computeDuration("2026-01-01T12:00:00.000Z", "2026-01-01T12:30:00.000Z"),
+      30,
+    );
+  });
+
+  it("returns null when end is before start", () => {
+    assert.equal(
+      utils.computeDuration("2026-01-01T13:00:00.000Z", "2026-01-01T12:00:00.000Z"),
+      null,
+    );
+  });
+
+  it("returns null when either argument is invalid", () => {
+    assert.equal(utils.computeDuration(null, "2026-01-01T12:00:00.000Z"), null);
+  });
+});
+
+// =============================================================================
 // A. Store read/write
 // =============================================================================
 describe("readStore", () => {
@@ -151,38 +187,6 @@ describe("closeStaleOpenSessions", () => {
     assert.equal(closed, 1);
     assert.ok(sessions[0].ended_at);
     assert.equal(sessions[1].ended_at, null);
-  });
-});
-
-describe("trimOldSessions", () => {
-  it("removes oldest completed sessions when over limit", () => {
-    const sessions = [
-      { session_id: "1", ended_at: "2026-01-01" },
-      { session_id: "2", ended_at: "2026-01-02" },
-      { session_id: "3", ended_at: "2026-01-03" },
-    ];
-    const removed = utils.trimOldSessions(sessions, 2);
-    assert.equal(removed, 1);
-    assert.equal(sessions.length, 2);
-  });
-
-  it("preserves open sessions even when over limit", () => {
-    const sessions = [
-      { session_id: "open1", ended_at: null },
-      { session_id: "open2", ended_at: null },
-      { session_id: "closed", ended_at: "2026-01-01" },
-    ];
-    const removed = utils.trimOldSessions(sessions, 2);
-    assert.equal(removed, 1);
-    assert.equal(sessions.length, 2);
-    assert.ok(sessions.every((s) => s.ended_at === null), "only open sessions remain");
-  });
-
-  it("does nothing when under limit", () => {
-    const sessions = [{ session_id: "1", ended_at: "2026-01-01" }];
-    const removed = utils.trimOldSessions(sessions, 10);
-    assert.equal(removed, 0);
-    assert.equal(sessions.length, 1);
   });
 });
 
@@ -359,58 +363,6 @@ describe("extractBodyAfterSummaryHeading", () => {
   });
 });
 
-describe("summaryBodyToBullets", () => {
-  it("strips -, *, and numbered list markers", () => {
-    const bullets = utils.summaryBodyToBullets("- First\n* Second\n1. Third\n2) Fourth");
-    assert.deepEqual(bullets, ["First", "Second", "Third", "Fourth"]);
-  });
-
-  it("skips empty lines", () => {
-    const bullets = utils.summaryBodyToBullets("- First\n\n- Second\n\n");
-    assert.deepEqual(bullets, ["First", "Second"]);
-  });
-});
-
-describe("tryExtractSummaryHeadingBullets", () => {
-  it("collects bullets from all assistant messages (oldest to newest)", () => {
-    const turns = [
-      { role: "assistant", text: "## Summary\n- Old bullet" },
-      { role: "user", text: "thanks" },
-      { role: "assistant", text: "## Summary\n- New bullet" },
-    ];
-    const bullets = utils.tryExtractSummaryHeadingBullets(turns);
-    assert.deepEqual(bullets, ["Old bullet", "New bullet"]);
-  });
-
-  it("extracts summary from multi-line text with Implementation Details preceding it", () => {
-    const text = [
-      "**Implementation Details:**",
-      "- Created Modal.js — a reusable React Modal component",
-      "- Created Modal.css — styling with overlay",
-      "",
-      "**Summary:**",
-      "Created a React Modal component with props for title, children, onClose, and",
-      "isOpen. The modal includes a styled overlay, header with close button.",
-    ].join("\n");
-    const turns = [{ role: "assistant", text }];
-    const bullets = utils.tryExtractSummaryHeadingBullets(turns);
-    assert.ok(bullets, "should find summary bullets");
-    assert.ok(bullets.length > 0, "should have at least one bullet");
-    assert.ok(
-      bullets[0].includes("React Modal"),
-      `first bullet should mention React Modal, got: ${bullets[0]}`,
-    );
-  });
-
-  it("extracts plain 'Summary:' heading (no bold)", () => {
-    const text = "Some preamble.\n\nSummary:\nDid the thing.\nFixed the bug.";
-    const turns = [{ role: "assistant", text }];
-    const bullets = utils.tryExtractSummaryHeadingBullets(turns);
-    assert.ok(bullets);
-    assert.ok(bullets.length >= 1);
-  });
-});
-
 // =============================================================================
 // E. Session Log extraction
 // =============================================================================
@@ -545,28 +497,6 @@ describe("tryExtractSessionLog", () => {
 });
 
 // =============================================================================
-// F. Title derivation
-// =============================================================================
-describe("deriveTitleFromSummaryBullets", () => {
-  it("uses first bullet as title", () => {
-    const title = utils.deriveTitleFromSummaryBullets(["Added auth feature", "Fixed tests"]);
-    assert.equal(title, "Added auth feature");
-  });
-
-  it("truncates long titles at 100 chars", () => {
-    const longBullet = "A".repeat(150);
-    const title = utils.deriveTitleFromSummaryBullets([longBullet]);
-    assert.equal(title.length, 100);
-    assert.ok(title.endsWith("…"));
-  });
-
-  it('falls back to "Session YYYY-MM-DD"', () => {
-    const title = utils.deriveTitleFromSummaryBullets([], "2026-04-18T12:00:00Z");
-    assert.equal(title, "Session 2026-04-18");
-  });
-});
-
-// =============================================================================
 // G. Path resolution — daily file scheme
 // =============================================================================
 describe("todayDateString", () => {
@@ -634,38 +564,6 @@ describe("resolveStoreFileForToday", () => {
       result.endsWith(`session-work-log-${today}.json`),
       `expected path to end with today's date, got: ${result}`,
     );
-  });
-});
-
-describe("resolveStoreFilePath (backward compat)", () => {
-  it("returns same as resolveStoreFileForToday", () => {
-    const config = {
-      session_tracking: {
-        store_directory: "work-logs",
-        store_name_prefix: "session-work-log",
-      },
-    };
-    assert.equal(
-      utils.resolveStoreFilePath(config),
-      utils.resolveStoreFileForToday(config),
-    );
-  });
-});
-
-// =============================================================================
-// H. Misc edge cases
-// =============================================================================
-describe("buildChunks", () => {
-  it("handles zero duration", () => {
-    const chunks = utils.buildChunks([], 0, ["Did stuff"]);
-    assert.equal(chunks.length, 1);
-    assert.equal(chunks[0].minutes, 0.05);
-  });
-
-  it("handles NaN duration (floors to 0.05)", () => {
-    const chunks = utils.buildChunks([], NaN, ["Did stuff"]);
-    assert.equal(chunks.length, 1);
-    assert.equal(chunks[0].minutes, 0.05);
   });
 });
 

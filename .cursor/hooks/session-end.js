@@ -6,7 +6,6 @@
  * Falls back to scanning the transcript_path Cursor provides (same as Claude).
  */
 
-const fs = require("fs");
 const path = require("path");
 const {
   loadTrackerConfig,
@@ -17,34 +16,9 @@ const {
   findLastSessionIndexById,
   loadConversationTurns,
   tryExtractSessionLog,
+  readStdinJson,
+  computeDuration,
 } = require("../../.claude/hooks/session-tracker-utils");
-
-function readStdinJson() {
-  try {
-    const raw = fs.readFileSync(0, "utf8");
-    return raw.trim() ? JSON.parse(raw) : {};
-  } catch (err) {
-    if (process.env.DEBUG) {
-      process.stderr.write(`[cursor:session-end] stdin parse error: ${err.message}\n`);
-    }
-    return {};
-  }
-}
-
-function parseIsoMs(iso) {
-  if (!iso) return null;
-  const t = Date.parse(iso);
-  return Number.isNaN(t) ? null : t;
-}
-
-function computeDuration(startedAt, endedAt) {
-  const startMs = parseIsoMs(startedAt);
-  const endMs = parseIsoMs(endedAt);
-  if (startMs != null && endMs != null && endMs >= startMs) {
-    return Math.round(((endMs - startMs) / 60000) * 100) / 100;
-  }
-  return null;
-}
 
 const CONFIG_PATH = path.resolve(__dirname, "../config.json");
 
@@ -71,7 +45,7 @@ function finalizeSession(storePath, sessionId, updates) {
 }
 
 async function main() {
-  const input = readStdinJson();
+  const input = readStdinJson("cursor:session-end");
   const config = loadTrackerConfig(CONFIG_PATH);
 
   if (!isSessionTrackingEnabled(config)) {

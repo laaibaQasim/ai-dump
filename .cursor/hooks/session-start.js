@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
 const path = require("path");
 const {
   loadTrackerConfig,
@@ -11,29 +10,17 @@ const {
   findOpenSessionIndex,
   findLastSessionIndexById,
   closeStaleOpenSessions,
-  trimOldSessions,
   cleanupOrphanedTmpFiles,
   getBranchName,
   getProjectName,
   resolveProjectPath,
+  readStdinJson,
 } = require("../../.claude/hooks/session-tracker-utils");
-
-function readStdinJson() {
-  try {
-    const raw = fs.readFileSync(0, "utf8");
-    return raw.trim() ? JSON.parse(raw) : {};
-  } catch (err) {
-    if (process.env.DEBUG) {
-      process.stderr.write(`[cursor:session-start] stdin parse error: ${err.message}\n`);
-    }
-    return {};
-  }
-}
 
 const CONFIG_PATH = path.resolve(__dirname, "../config.json");
 
 function main() {
-  const input = readStdinJson();
+  const input = readStdinJson("cursor:session-start");
   const config = loadTrackerConfig(CONFIG_PATH);
 
   if (!isSessionTrackingEnabled(config)) {
@@ -52,7 +39,6 @@ function main() {
   if (!Array.isArray(store.sessions)) store.sessions = [];
 
   closeStaleOpenSessions(store.sessions, config?.session_tracking?.stale_session_days);
-  trimOldSessions(store.sessions, config?.session_tracking?.max_sessions);
 
   if (!sessionId) {
     if (process.env.DEBUG) {

@@ -11,6 +11,39 @@ const { execFileSync } = require("child_process");
 
 const TRACKER_VERSION = 1;
 
+/**
+ * Read JSON from stdin (hook payloads). Returns {} on empty input or parse error.
+ * @param {string} [debugLabel] - Logged as `[label] ` when DEBUG=1 (e.g. `"cursor:session-end"`).
+ */
+function readStdinJson(debugLabel) {
+  try {
+    const raw = fs.readFileSync(0, "utf8");
+    return raw.trim() ? JSON.parse(raw) : {};
+  } catch (err) {
+    if (process.env.DEBUG) {
+      const tag = debugLabel ? `[${debugLabel}] ` : "";
+      process.stderr.write(`${tag}stdin parse error: ${err.message}\n`);
+    }
+    return {};
+  }
+}
+
+function parseIsoMs(iso) {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? null : t;
+}
+
+/** Duration in minutes between two ISO timestamps, or null if invalid. */
+function computeDuration(startedAt, endedAt) {
+  const startMs = parseIsoMs(startedAt);
+  const endMs = parseIsoMs(endedAt);
+  if (startMs != null && endMs != null && endMs >= startMs) {
+    return Math.round(((endMs - startMs) / 60000) * 100) / 100;
+  }
+  return null;
+}
+
 function tryExecGit(cwd, args) {
   try {
     return (
@@ -152,26 +185,6 @@ function resolveStoreFileForToday(config) {
   return buildStoreFilePath(config, todayDateString());
 }
 
-/**
- * Backward compat: resolves a single store file path.
- * New code should use resolveStoreFileForToday() instead.
- * Kept for the session-end hooks that may need to find a session opened on a previous day.
- */
-function resolveStoreFilePath(config) {
-  return resolveStoreFileForToday(config);
-}
-
-function sessionExistsInFile(filePath, sessionId) {
-  try {
-    const raw = fs.readFileSync(filePath, "utf8");
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data.sessions)) return false;
-    return data.sessions.some((s) => s && s.session_id === sessionId);
-  } catch {
-    return false;
-  }
-}
-
 function isSessionTrackingEnabled(config) {
   const st = config?.session_tracking;
   if (!st || typeof st !== "object") return false;
@@ -286,14 +299,6 @@ function findLastSessionIndexById(sessions, sessionId) {
 }
 
 const FALLBACK_STALE_DAYS = 7;
-const FALLBACK_MAX_SESSIONS = 200;
-const FALLBACK_MAX_BULLETS = 50;
-
-function getMaxBullets(config) {
-  const v = config?.session_tracking?.max_bullets;
-  return typeof v === "number" && v > 0 ? v : FALLBACK_MAX_BULLETS;
-}
-
 /**
  * Auto-close sessions older than staleDays that were never finalized.
  * Returns the number of sessions closed.
@@ -318,29 +323,6 @@ function closeStaleOpenSessions(sessions, staleDays) {
 }
 
 /**
- * Trim the oldest completed sessions to stay within maxSessions.
- * Keeps all open (unfinalised) sessions regardless of the limit.
- */
-function trimOldSessions(sessions, maxSessions) {
-  const limit =
-    typeof maxSessions === "number" && maxSessions > 0
-      ? maxSessions
-      : FALLBACK_MAX_SESSIONS;
-  if (sessions.length <= limit) return 0;
-  const excess = sessions.length - limit;
-  let removed = 0;
-  for (let i = 0; i < sessions.length && removed < excess; ) {
-    if (sessions[i] && sessions[i].ended_at) {
-      sessions.splice(i, 1);
-      removed++;
-    } else {
-      i++;
-    }
-  }
-  return removed;
-}
-
-/**
  * Remove leftover .tmp files from previous crashed writes.
  */
 function cleanupOrphanedTmpFiles(storePath) {
@@ -360,17 +342,6 @@ function cleanupOrphanedTmpFiles(storePath) {
   } catch {
     /* ignore */
   }
-}
-
-/** Default title from first Summary bullet. */
-function deriveTitleFromSummaryBullets(bullets, fallbackDateIso) {
-  const first = bullets && bullets[0];
-  if (first) {
-    const t = normalizeOneLine(first);
-    if (t.length) return truncate(t, 100);
-  }
-  const d = (fallbackDateIso || new Date().toISOString()).slice(0, 10);
-  return `Session ${d}`;
 }
 
 function normalizeOneLine(text) {
@@ -625,21 +596,6 @@ function extractBodyAfterSummaryHeading(text) {
   return joined || null;
 }
 
-/**
- * Turns a Summary body into bullet strings (list markers stripped).
- */
-function summaryBodyToBullets(body) {
-  const lines = body.split(/\r?\n/);
-  const out = [];
-  for (const line of lines) {
-    const t = line.trim();
-    if (!t) continue;
-    let item = t.replace(/^[-*•]\s+/, "").replace(/^\d+[.)]\s+/, "").trim();
-    if (item) out.push(item);
-  }
-  return out;
-}
-
 // =============================================================================
 // Session Log extraction (structured fields)
 // =============================================================================
@@ -720,61 +676,16 @@ function tryExtractSessionLog(turns) {
   return logs.length > 0 ? logs : null;
 }
 
-/**
- * Scans all assistant messages (oldest to newest), collecting bullets from every
- * message that contains a Summary section. Returns the combined array, or null.
- */
-function tryExtractSummaryHeadingBullets(turns) {
-  if (!turns.length) return null;
-  const allBullets = [];
-  for (let i = 0; i < turns.length; i++) {
-    if (turns[i].role !== "assistant") continue;
-    const body = extractBodyAfterSummaryHeading(turns[i].text);
-    if (!body) continue;
-    const bullets = summaryBodyToBullets(body);
-    if (bullets.length) {
-      allBullets.push(...bullets);
-      continue;
-    }
-    const fallback = normalizeOneLine(body);
-    if (fallback.length >= 12) allBullets.push(fallback);
-  }
-  return allBullets.length ? allBullets : null;
-}
-
-/**
- * Summary bullets from assistant "## Summary" sections only (may be empty array).
- */
-function buildSummaryBullets(turns) {
-  return tryExtractSummaryHeadingBullets(turns) || [];
-}
-
-/**
- * One chunk from the Summary bullets; duration fills the session window.
- */
-function buildChunks(_turns, totalMinutes, summaryBullets) {
-  const safeMinutes = Math.max(
-    0.05,
-    typeof totalMinutes === "number" && !Number.isNaN(totalMinutes) ? totalMinutes : 0,
-  );
-  return [
-    {
-      title: "Summary",
-      minutes: Math.round(safeMinutes * 100) / 100,
-      bullets: Array.isArray(summaryBullets) ? summaryBullets : [],
-    },
-  ];
-}
-
 module.exports = {
   TRACKER_VERSION,
-  getMaxBullets,
+  readStdinJson,
+  parseIsoMs,
+  computeDuration,
   getBranchName,
   getProjectName,
   resolveProjectPath,
   loadTrackerConfig,
   resolveStoreDirectory,
-  resolveStoreFilePath,
   resolveStoreFileForToday,
   buildStoreFilePath,
   todayDateString,
@@ -784,17 +695,11 @@ module.exports = {
   findOpenSessionIndex,
   findLastSessionIndexById,
   closeStaleOpenSessions,
-  trimOldSessions,
   cleanupOrphanedTmpFiles,
-  deriveTitleFromSummaryBullets,
   loadConversationTurns,
-  buildSummaryBullets,
-  tryExtractSummaryHeadingBullets,
-  buildChunks,
   truncate,
   parseSummaryHeadingLine,
   extractBodyAfterSummaryHeading,
-  summaryBodyToBullets,
   SESSION_LOG_FIELDS,
   isSessionLogHeadingLine,
   extractSessionLog,

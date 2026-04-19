@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
 const {
   loadTrackerConfig,
   resolveStoreFileForToday,
@@ -10,34 +9,9 @@ const {
   findLastSessionIndexById,
   loadConversationTurns,
   tryExtractSessionLog,
+  readStdinJson,
+  computeDuration,
 } = require("./session-tracker-utils");
-
-function readStdinJson() {
-  try {
-    const raw = fs.readFileSync(0, "utf8");
-    return raw.trim() ? JSON.parse(raw) : {};
-  } catch (err) {
-    if (process.env.DEBUG) {
-      process.stderr.write(`[session-end] stdin parse error: ${err.message}\n`);
-    }
-    return {};
-  }
-}
-
-function parseIsoMs(iso) {
-  if (!iso) return null;
-  const t = Date.parse(iso);
-  return Number.isNaN(t) ? null : t;
-}
-
-function computeDuration(startedAt, endedAt) {
-  const startedMs = parseIsoMs(startedAt);
-  const endedMs = parseIsoMs(endedAt);
-  if (startedMs != null && endedMs != null && endedMs >= startedMs) {
-    return Math.round(((endedMs - startedMs) / 60000) * 100) / 100;
-  }
-  return null;
-}
 
 /**
  * Finalize a session row with all available data and persist it.
@@ -62,7 +36,7 @@ function finalizeSession(storePath, sessionId, updates) {
 }
 
 async function main() {
-  const input = readStdinJson();
+  const input = readStdinJson("session-end");
   const config = loadTrackerConfig();
 
   if (!isSessionTrackingEnabled(config)) {

@@ -87,8 +87,6 @@ If you use **Claude Code hooks** in [`.claude/settings.json`](../.claude/setting
 | `enabled` | Enables/disables logging |
 | `store_directory` | Where logs are stored (default `work-logs/`) |
 | `store_name_prefix` | Filename prefix for daily JSON files |
-| `max_sessions` | Max completed sessions retained |
-| `max_bullets` | Reserved / legacy (see Claude hooks doc) |
 | `stale_session_days` | Auto-close inactive sessions |
 | `temp_session_id_log` | Optional debug logging for session IDs |
 

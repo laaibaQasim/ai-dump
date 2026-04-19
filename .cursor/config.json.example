@@ -3,8 +3,6 @@
     "enabled": false,
     "store_directory": "work-logs",
     "store_name_prefix": "session-work-log",
-    "max_sessions": 200,
-    "max_bullets": 50,
     "stale_session_days": 7
   }
 }

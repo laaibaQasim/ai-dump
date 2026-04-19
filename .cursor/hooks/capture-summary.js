@@ -6,7 +6,6 @@
  */
 
 const path = require("path");
-const fs = require("fs");
 const {
   loadTrackerConfig,
   isSessionTrackingEnabled,
@@ -19,24 +18,13 @@ const {
   getBranchName,
   getProjectName,
   resolveProjectPath,
+  readStdinJson,
 } = require("../../.claude/hooks/session-tracker-utils");
-
-function readStdinJson() {
-  try {
-    const raw = fs.readFileSync(0, "utf8");
-    return raw.trim() ? JSON.parse(raw) : {};
-  } catch (err) {
-    if (process.env.DEBUG) {
-      process.stderr.write(`[cursor:capture-summary] stdin parse error: ${err.message}\n`);
-    }
-    return {};
-  }
-}
 
 const CONFIG_PATH = path.resolve(__dirname, "../config.json");
 
 function main() {
-  const input = readStdinJson();
+  const input = readStdinJson("cursor:capture-summary");
   const config = loadTrackerConfig(CONFIG_PATH);
 
   if (!isSessionTrackingEnabled(config)) {
