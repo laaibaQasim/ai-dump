@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [{ "command": ".cursor/hooks/session-start.js" }],
+    "afterAgentResponse": [{ "command": ".cursor/hooks/capture-summary.js" }],
+    "sessionEnd": [{ "command": ".cursor/hooks/session-end.js", "timeout": 30 }]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "session_tracking": {
+    "enabled": false,
+    "store_directory": "work-logs",
+    "store_name_prefix": "session-work-log",
+    "stale_session_days": 7
+  }
+}

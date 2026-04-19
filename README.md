@@ -1,122 +1,86 @@
 # ai-dump
 
-Claude hooks that play sounds and show desktop notifications when the agent finishes a task, fails, or needs permission.
+## Track your AI workflows smarter
 
-## Hooks
+This project sends real-time voice notifications when your tasks need attention or finish—so you don’t have to keep checking your screen. It also summarizes your sessions to help you write daily standups, track time, and review what actually happened.
 
-Three hooks fire automatically during Claude sessions:
+The bigger goal: help you spot inefficiencies, improve prompts, and move toward agentic workflows—while understanding which models work best so you save both time and cost.
 
-| Event | Hook file | Default sound |
-|---|---|---|
-| Task completed | `notify-stop.js` | `task-completed.mp3` |
-| Task failed | `notify-failure.js` | `task-failed.mp3` |
-| Permission needed | `notify-permission.js` | `approval-required.mp3` |
+## What this repo is
 
-Notifications are suppressed when a dev-focused app is frontmost (for example Cursor, Terminal, VS Code, iTerm2, Warp, common Linux terminals, or Windows Terminal). They only fire when the active window is something else.
+A plug-and-play toolkit for **Claude Code** and **Cursor** that adds notifications and session logging to your workflow.
 
----
+- Get notified when tasks finish, fail, or need input  
+- Track what happens in every session with structured logs (`session_logs`)  
+- Review past runs to debug issues and improve prompts  
 
-## Installation
+Works out of the box with simple Node scripts. See [`docs/`](docs/) for full behavior.
 
-No npm install — hooks use Node built-ins only.
+## What this solves
 
-### Project level
+- **Don’t miss important events** — Get notified when tasks finish, fail, or need your input  
+- **Avoid babysitting long runs** — Step away and get alerted when something matters  
+- **Understand failures faster** — Use logs to spot errors, delays, or weak spots  
+- **Improve prompts over time** — Review past sessions to see what worked  
+- **Keep a history of work** — Retain context after sessions end  
+- **Make better decisions** — Use real usage data instead of guesswork  
 
-Applies only to the current project. Place the hooks inside the project's `.claude/` directory:
+## Hooks in this repo
 
-```
-your-project/
-└── .claude/
-    ├── config.json
-    └── hooks/
-        ├── platform.js
-        ├── notify-stop.js
-        ├── notify-failure.js
-        └── notify-permission.js
-```
+| Tool | Events | Role |
+|------|--------|------|
+| **Claude Code** | `SessionStart`, `SessionEnd` | Daily JSON session logs. On end, scans the transcript for `### Session Log` blocks and writes `session_logs`. Works with project rules that ask for a `### Session Log` (and optional `**Summary:**`) on coding tasks. |
+| **Claude Code** | `Stop`, `StopFailure`, `PermissionRequest` | Desktop notifications when a run completes, fails, or needs approval. |
+| **Cursor** | `sessionStart`, `sessionEnd` | Same session log model as Claude Code (finalize + transcript fallback). |
+| **Cursor** | `afterAgentResponse` | Runs `capture-summary.js`: parses each assistant reply for `### Session Log` and **appends** a timestamped entry to `session_logs` while the session is open. |
 
-### Root level
+Scripts live under [`.claude/hooks/`](.claude/hooks/) and [`.cursor/hooks/`](.cursor/hooks/). Wiring is in [`.claude/settings.json`](.claude/settings.json) and [`.cursor/hooks.json`](.cursor/hooks.json).
 
-Applies to all Claude sessions across every project. Place the hooks inside `~/.claude/`:
+### What gets logged
 
-```
-~/.claude/
-├── config.json
-└── hooks/
-    ├── platform.js
-    ├── notify-stop.js
-    ├── notify-failure.js
-    └── notify-permission.js
-```
+When session tracking is enabled, each session row stores **`session_logs`**: an array of objects, one per captured reply, each with:
 
-Project-level config takes precedence over root-level config when both exist.
+- **`captured_at`** — ISO timestamp when the entry was written  
+- **`user_intent`**, **`prompt_summary`**, **`provided_context`**, **`what_i_did`**, **`open_issues`**, **`next_best_step`** (see project rules in `CLAUDE.md` / `.cursor/rules/task-summary.md`)
 
----
+Older daily files may still contain legacy `summary_bullets`; new sessions use `session_logs` only.
 
-## Platform requirements
+## Quick start
 
-| OS | Notification | Sound |
-|---|---|---|
-| **macOS** | `osascript` (`display notification`) | `afplay` |
-| **Linux** | `notify-send` (if available) | `mpg123` or `ffplay` (first found) |
-| **Windows** | PowerShell tray balloon | PowerShell `MediaPlayer` |
+Copy this repo into your project, or copy `.claude/` into your user-level config (**`~/.claude/`**). Ensure **Node** is on your `PATH` (hooks use Node built-ins only).
 
-Frontmost-app detection (for suppression): **macOS** uses AppleScript / System Events; **Linux** uses `xdotool` when installed (otherwise suppression may not apply). **Windows** has no frontmost check; hooks always consider notifying unless you extend the list in `platform.js`.
+### Run the **setup** command
 
-Set `DEBUG=1` (or any non-empty value) when running Node if you want errors from sound/notification code on **stderr** — normal hook **stdout** stays clean for Claude.
+In Cursor, run the project custom command **setup** ([`.cursor/commands/setup.md`](.cursor/commands/setup.md))—for example from the commands menu or by referencing it in chat the way you usually invoke project commands.
 
----
+The agent creates `work-logs/`, copies example configs when missing, optionally updates **`.git/info/exclude`**, runs hook tests—but only after you answer whether local configs and logs should be tracked by git, so edits stay explicit and reviewable.
 
-<details>
-<summary>Disable all hooks</summary>
+Session logging is toggled with **`session_tracking.enabled`** in [`.claude/config.json`](.claude/config.json) and [`.cursor/config.json`](.cursor/config.json) (defaults write under `work-logs/`). Full options are in the [detailed docs](#detailed-docs) below.
 
-Set `enabled` to `false` in `.claude/config.json`:
+### Keep local files out of Git (manual alternative)
 
-```json
-{ "enabled": false }
-```
+If you skip **setup** or need extra paths, use **`.git/info/exclude`** so ignores stay on your machine only (no shared `.gitignore`). Append `work-logs/`, `.claude/config.json`, and `.cursor/config.json` as needed—the same entries the **setup** command adds when you choose not to track those files.
 
-</details>
+### Smoke-test the hooks
 
-<details>
-<summary>Enable or disable a specific hook</summary>
+Run a short task in **Cursor** and **Claude Code**. To exercise the permission hook, ask the agent to do something that triggers an approval (for example, create a small file in a safe path the tool must confirm).
 
-Toggle the `enabled` field on any hook in `.claude/config.json`:
+Hooks do not access arbitrary paths.
 
-```json
-{
-  "hooks": {
-    "task_done":        { "enabled": false },
-    "task_failed":      { "enabled": true  },
-    "permission_needed":{ "enabled": true  }
-  }
-}
-```
+- **Write**: only under the project root (default `work-logs/`, with safeguards preventing path escape)  
+- **Read**: only from transcript paths provided by Claude Code or Cursor  
 
-</details>
+Treat hook stdin as trusted only to the extent you trust those tools.
 
-<details>
-<summary>Change a sound</summary>
+## Detailed docs
 
-Update the `sound` field for the relevant hook and drop the `.mp3` into the sounds directory:
+| Doc | Contents |
+|-----|----------|
+| [Claude hooks](docs/claude-hooks.md) | Config, each hook, edge cases, filesystem scope |
+| [Cursor hooks](docs/cursor-hooks.md) | Config, each hook, edge cases, filesystem scope |
 
-```json
-{
-  "hooks": {
-    "task_done": { "enabled": true, "sound": "my-custom-sound.mp3" }
-  }
-}
-```
+## License
 
-</details>
+See [LICENSE](LICENSE).
 
-<details>
-<summary>Change the sounds directory</summary>
-
-Update `sounds_directory` in `.claude/config.json` to any absolute or relative path:
-
-```json
-{ "sounds_directory": "/Users/you/sounds" }
-```
-
-</details>
+Analysis features are still evolving, so feedback and ideas are welcome. If this is useful, consider starring the repo to follow updates.

@@ -38,8 +38,7 @@ function psLiteral(str) {
 
 function isAccessibleFile(filePath) {
   try {
-    fs.accessSync(filePath, fs.constants.R_OK);
-    return fs.statSync(filePath).isFile();
+    return fs.statSync(filePath).isFile(); // statSync() already fails if the file is not accessible or doesn’t exist
   } catch {
     return false;
   }
@@ -55,16 +54,27 @@ function playSound(soundPath) {
     }
 
     if (IS_LINUX) {
-      if (commandExists("mpg123")) {
-        execFileSync("mpg123", ["-q", soundPath], { stdio: "ignore" });
-        return;
-      }
       if (commandExists("ffplay")) {
         execFileSync(
           "ffplay",
           ["-nodisp", "-autoexit", "-loglevel", "quiet", soundPath],
           { stdio: "ignore" },
         );
+        return;
+      }
+
+      if (commandExists("paplay")) {
+        execFileSync("paplay", [soundPath], { stdio: "ignore" });
+        return;
+      }
+
+      if (commandExists("aplay")) {
+        execFileSync("aplay", [soundPath], { stdio: "ignore" });
+        return;
+      }
+
+      if (commandExists("mpg123")) {
+        execFileSync("mpg123", ["-q", soundPath], { stdio: "ignore" });
         return;
       }
     }
@@ -104,7 +114,7 @@ function notify(title, message) {
   );
 
   try {
-    if (IS_DARWIN) {
+    if (IS_DARWIN && commandExists("osascript")) {
       tryExec("osascript", [
         "-e",
         `display notification "${safeMessage}" with title "${safeTitle}"`,
@@ -123,8 +133,8 @@ function notify(title, message) {
       const psTitle = psLiteral(safeTitle);
       const psMsg = psLiteral(safeMessage);
       const script =
-        `[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');` +
-        `[void][System.Reflection.Assembly]::LoadWithPartialName('System.Drawing');` +
+        `Add-Type -AssemblyName System.Windows.Forms;` +
+        `Add-Type -AssemblyName System.Drawing;` +
         `$n = New-Object System.Windows.Forms.NotifyIcon;` +
         `$n.Icon = [System.Drawing.SystemIcons]::Information;` +
         `$n.Visible = $true;` +
@@ -146,7 +156,7 @@ function notify(title, message) {
 }
 
 function getFrontmostApp() {
-  if (IS_DARWIN) {
+  if (IS_DARWIN && commandExists("osascript")) {
     return (
       tryExec("osascript", [
         "-e",
