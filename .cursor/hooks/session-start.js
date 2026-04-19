@@ -4,7 +4,7 @@ const path = require("path");
 const {
   loadTrackerConfig,
   isSessionTrackingEnabled,
-  resolveStoreFileForToday,
+  buildStoreFilePath,
   readStore,
   writeStoreAtomic,
   findOpenSessionIndex,
@@ -28,7 +28,7 @@ function main() {
     return;
   }
 
-  const todayStorePath = resolveStoreFileForToday(config);
+  const todayStorePath = buildStoreFilePath(config);
   const sessionId = input.session_id || null;
   const cwd = input.cwd || process.cwd();
   const now = new Date().toISOString();

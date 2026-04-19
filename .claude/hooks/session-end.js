@@ -2,7 +2,7 @@
 
 const {
   loadTrackerConfig,
-  resolveStoreFileForToday,
+  buildStoreFilePath,
   isSessionTrackingEnabled,
   readStore,
   writeStoreAtomic,
@@ -53,7 +53,7 @@ async function main() {
   }
 
   // Always finalize in today's file (daily view: all activity on a given day goes in that day's file)
-  const storePath = resolveStoreFileForToday(config);
+  const storePath = buildStoreFilePath(config)
 
   const store = readStore(storePath);
   if (!Array.isArray(store.sessions)) {

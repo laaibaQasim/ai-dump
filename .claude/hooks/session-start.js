@@ -2,7 +2,7 @@
 
 const {
   loadTrackerConfig,
-  resolveStoreFileForToday,
+  buildStoreFilePath,
   isSessionTrackingEnabled,
   readStore,
   writeStoreAtomic,
@@ -25,7 +25,7 @@ function main() {
     return;
   }
 
-  const todayStorePath = resolveStoreFileForToday(config);
+  const todayStorePath = buildStoreFilePath(config)
   const cwd = input.cwd || process.cwd();
   const sessionId = input.session_id || null;
   const now = new Date().toISOString();

@@ -9,7 +9,7 @@ const path = require("path");
 const {
   loadTrackerConfig,
   isSessionTrackingEnabled,
-  resolveStoreFileForToday,
+  buildStoreFilePath,
   readStore,
   writeStoreAtomic,
   findOpenSessionIndex,
@@ -46,7 +46,7 @@ function main() {
     return;
   }
 
-  const STORE_PATH = resolveStoreFileForToday(config);
+  const STORE_PATH = buildStoreFilePath(config);
   const store = readStore(STORE_PATH);
   if (!Array.isArray(store.sessions)) store.sessions = [];
 

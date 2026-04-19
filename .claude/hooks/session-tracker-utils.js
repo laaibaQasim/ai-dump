@@ -172,17 +172,11 @@ function todayDateString() {
 /**
  * Builds the full path for a given date's log file.
  */
-function buildStoreFilePath(config, dateStr) {
+function buildStoreFilePath(config) {
+  const dateStr = todayDateString();
   const dir = resolveStoreDirectory(config);
   const prefix = getStorePrefix(config);
   return path.join(dir, `${prefix}-${dateStr}.json`);
-}
-
-/**
- * Returns the store file path for today.
- */
-function resolveStoreFileForToday(config) {
-  return buildStoreFilePath(config, todayDateString());
 }
 
 function isSessionTrackingEnabled(config) {
@@ -686,7 +680,6 @@ module.exports = {
   resolveProjectPath,
   loadTrackerConfig,
   resolveStoreDirectory,
-  resolveStoreFileForToday,
   buildStoreFilePath,
   todayDateString,
   isSessionTrackingEnabled,

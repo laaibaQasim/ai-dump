@@ -550,23 +550,6 @@ describe("buildStoreFilePath", () => {
   });
 });
 
-describe("resolveStoreFileForToday", () => {
-  it("returns path ending with today's date", () => {
-    const config = {
-      session_tracking: {
-        store_directory: "work-logs",
-        store_name_prefix: "session-work-log",
-      },
-    };
-    const result = utils.resolveStoreFileForToday(config);
-    const today = utils.todayDateString();
-    assert.ok(
-      result.endsWith(`session-work-log-${today}.json`),
-      `expected path to end with today's date, got: ${result}`,
-    );
-  });
-});
-
 describe("cleanupOrphanedTmpFiles", () => {
   let tmpDir;
   beforeEach(() => { tmpDir = makeTmpDir(); });
