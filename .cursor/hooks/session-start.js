@@ -31,6 +31,7 @@ function main() {
   const todayStorePath = buildStoreFilePath(config);
   const sessionId = input.session_id || null;
   const cwd = input.cwd || process.cwd();
+  const model = input.model || null;
   const now = new Date().toISOString();
 
   cleanupOrphanedTmpFiles(todayStorePath);
@@ -72,6 +73,7 @@ function main() {
   store.sessions.push({
     session_id: sessionId,
     tool: "cursor",
+    model,
     started_at: now,
     project_name: getProjectName(cwd),
     project_path: resolveProjectPath(cwd),

@@ -34,6 +34,7 @@ function main() {
 
   const sessionId = input.session_id || null;
   const responseText = input.text || null;
+  const model = input.model || null;
 
   if (!sessionId || !responseText || typeof responseText !== "string") {
     process.stdout.write("{}\n");
@@ -63,6 +64,7 @@ function main() {
     store.sessions.push({
       session_id: sessionId,
       tool: "cursor",
+      model,
       started_at: new Date().toISOString(),
       project_name: getProjectName(cwd),
       project_path: resolveProjectPath(cwd),

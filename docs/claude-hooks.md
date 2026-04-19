@@ -139,6 +139,7 @@ Older files may still show legacy `summary_bullets`; new sessions use `session_l
     {
       "session_id": "abc123",
       "tool": "claude",
+      "model": "claude-sonnet-4-6",
       "started_at": "...",
       "ended_at": "...",
       "duration_minutes": 30,

@@ -536,17 +536,19 @@ describe("buildStoreFilePath", () => {
         store_name_prefix: "session-work-log",
       },
     };
-    const result = utils.buildStoreFilePath(config, "2026-04-18");
+    const result = utils.buildStoreFilePath(config);
     const repoRoot = path.resolve(__dirname, "../../..");
+    const today = utils.todayDateString();
     assert.equal(
       result,
-      path.join(repoRoot, "work-logs", "session-work-log-2026-04-18.json"),
+      path.join(repoRoot, "work-logs", `session-work-log-${today}.json`),
     );
   });
 
   it("uses default prefix when unconfigured", () => {
-    const result = utils.buildStoreFilePath({}, "2026-01-01");
-    assert.ok(result.endsWith("session-work-log-2026-01-01.json"));
+    const result = utils.buildStoreFilePath({});
+    const today = utils.todayDateString();
+    assert.ok(result.endsWith(`session-work-log-${today}.json`));
   });
 });
 

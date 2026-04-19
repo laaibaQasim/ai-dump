@@ -117,6 +117,7 @@ Each session includes:
     {
       "session_id": "xyz789",
       "tool": "cursor",
+      "model": "cursor-small",
       "started_at": "...",
       "ended_at": "...",
       "duration_minutes": 25,
