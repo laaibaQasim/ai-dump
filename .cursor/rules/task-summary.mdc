@@ -1,0 +1,62 @@
+---
+description: Enforce Summary and Session Log blocks on every coding response when session tracking is enabled
+alwaysApply: true
+---
+
+# Task Summary & Session Logging
+
+**Only applies when** `session_tracking.enabled` is `true` in `.cursor/config.json`. If it is `false` or missing, respond normally.
+
+If unsure, read `.cursor/config.json` before applying the rules below.
+
+---
+
+## Requirements (when session tracking is enabled)
+
+For every task-based response (coding, debugging, feature implementation):
+
+1. **Always include a summary** — no exceptions, regardless of response length
+2. **Skip only for** non-coding responses that are 2–3 lines or less
+3. **For coding tasks**, add an **Implementation Details** section before the summary listing key files changed (with line numbers where relevant)
+4. **Summary heading** MUST be exactly `**Summary:**` — hooks depend on this exact string
+5. **Summary length**: one paragraph maximum
+
+### Coding Task Format
+
+```
+[... response content ...]
+
+**Implementation Details:**
+- Updated `src/components/Button.tsx:45-60` to add loading state
+
+**Summary:**
+You asked me to [X]. I did [Y].
+```
+
+---
+
+## Session Log (every response)
+
+Append a `### Session Log` section at the end of every response. Always include it unless the user explicitly says not to.
+
+Fields:
+- **User Intent:** 1–2 sentence summary of the request
+- **Prompt Summary:** compressed task + constraints + expected outcome
+- **Provided Context:** files, code, or other material the user supplied (summarize, never dump verbatim)
+- **What I Did:** short summary of work completed
+- **Open Issues:** anything unresolved, missing, or uncertain
+- **Next Best Step:** single most useful next action
+
+Keep the log concise. Prefer signal over detail. No filler words.
+
+### Example
+
+```
+### Session Log
+- **User Intent:** Add a loading state to the Button component.
+- **Prompt Summary:** Update Button to show spinner and disable while loading.
+- **Provided Context:** Button.tsx snippet provided.
+- **What I Did:** Added `loading` prop, updated validate.ts edge case.
+- **Open Issues:** No tests updated yet.
+- **Next Best Step:** Add unit tests for the loading state.
+```
