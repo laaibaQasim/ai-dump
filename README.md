@@ -228,14 +228,6 @@ See the [log-analysis README](log-analysis/README.md) for setup and usage.
 
 Longer term, this kit is meant to help you spot inefficiencies, tighten prompts, and move toward more agentic workflows — while building intuition for which models and patterns save time and cost.
 
-Analysis features are still evolving, so feedback and ideas are welcome. If this is useful, consider starring the repo to follow updates.
-
----
-
-## Vision
-
-Longer term, this kit is meant to help you spot inefficiencies, tighten prompts, and move toward more agentic workflows — while building intuition for which models and patterns save time and cost.
-
 ---
 
 ## Contributing
