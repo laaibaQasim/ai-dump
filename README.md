@@ -26,9 +26,44 @@
 
 ## How It Works
 
-1. **Hooks** listen to Claude Code / Cursor lifecycle and UI events (session start/end, stop, failure, permission, after-agent reply).
+## Quick Start
+
+1. **Copy** this repo into your project, or copy **`.claude/`** into your user-level config (`~/.claude/`).
+2. **Install Node.js** and ensure `node` is on your `PATH` (hooks use Node built-ins only).
+3. In **Cursor**, run the project custom command **setup** (`.cursor/commands/setup.md`) from the commands menu or chat.
+4. Run a **short test task** in Cursor and Claude Code; optionally trigger a **permission** flow to hear/see the approval hook.
+
+<details>
+<summary>Setup details</summary>
+
+- **setup** creates `work-logs/`, copies example configs when missing, optionally updates `.git/info/exclude`, runs hook tests, and asks whether local configs and logs should be tracked in git.
+- Session logging is toggled with **`session_tracking.enabled`** in [`.claude/config.json`](.claude/config.json) and [`.cursor/config.json`](.cursor/config.json) (defaults write under `work-logs/`).
+
+**Keep local files out of Git (manual alternative)**
+
+If you skip **setup** or need extra paths, append to `.git/info/exclude`:
+```
+work-logs/
+.claude/config.json
+.cursor/config.json
+```
+These are machine-local ignores and don't touch the shared `.gitignore`.
+
+**Smoke-test the hooks**
+
+Ask the agent to do something that requires approval (e.g. create a file in a path the tool must confirm) to exercise the permission hook.
+
+**Filesystem scope:** hooks **write** only under the project root (default `work-logs/`, with path safeguards) and **read** only transcript paths supplied by Claude Code or Cursor.
+
+</details>
+
+---
+
+## How It Works
+
+1. **Hooks** listen to Claude Code / Cursor lifecycle events (session start/end, stop, failure, permission, after-agent reply).
 2. **Scripts** under [`.claude/hooks/`](.claude/hooks/) and [`.cursor/hooks/`](.cursor/hooks/) play sounds / show notifications or parse replies and update the store.
-3. **Logs** are written as one file per day, e.g. `work-logs/session-work-log-YYYY-MM-DD.json`, when session tracking is enabled.
+3. **Logs** are written as one file per day — `work-logs/session-work-log-YYYY-MM-DD.json` — when session tracking is enabled.
 4. **You** skim or query those files (and transcripts) to improve prompts, estimate time, and see what actually shipped.
 5. It runs out of the box with the bundled hook wiring ([`.claude/settings.json`](.claude/settings.json), [`.cursor/hooks.json`](.cursor/hooks.json)).
 
@@ -48,7 +83,9 @@
 
 ## Hooks
 
-These hooks power **notifications** and **session tracking**:
+---
+
+## Hooks
 
 | Tool | Events | Role |
 |------|--------|------|
@@ -57,7 +94,7 @@ These hooks power **notifications** and **session tracking**:
 | **Cursor** | `sessionStart`, `sessionEnd` | Same session log model as Claude Code (finalize + transcript fallback) |
 | **Cursor** | `afterAgentResponse` | Appends a timestamped entry to `session_logs` while the session is open |
 
-Scripts live under [`.claude/hooks/`](.claude/hooks/) and [`.cursor/hooks/`](.cursor/hooks/). Wiring is in [`.claude/settings.json`](.claude/settings.json) and [`.cursor/hooks.json`](.cursor/hooks.json).
+Wiring is in [`.claude/settings.json`](.claude/settings.json) and [`.cursor/hooks.json`](.cursor/hooks.json).
 
 ---
 
@@ -90,7 +127,9 @@ See project rules in `CLAUDE.md` / `.cursor/rules/task-summary.md` for full fiel
 
 ## Commands
 
-This repo ships two Cursor project commands (in [`.cursor/commands/`](.cursor/commands/)):
+---
+
+## Commands
 
 | Command | File | What it does |
 |---------|------|-------------|
@@ -120,7 +159,7 @@ Run **/logger** in Cursor chat at any point during or at the end of your day. It
 - Re-read rules file to confirm session tracking was enabled
 ```
 
-The output is human-readable and ready to paste.
+</details>
 
 </details>
 
@@ -159,9 +198,9 @@ These are machine-local ignores — no shared `.gitignore` needed.
 <details>
 <summary><strong>Smoke-test the hooks</strong></summary>
 
-To exercise the permission hook, ask the agent to do something that requires approval (for example, create a small file in a path the tool must confirm).
+</details>
 
-**Filesystem scope:** hooks **write** only under the project root (default `work-logs/`, with path safeguards) and **read** only transcript paths supplied by Claude Code or Cursor. Treat hook stdin as trusted only to the extent you trust those tools.
+---
 
 </details>
 
@@ -181,6 +220,15 @@ See the [log-analysis README](log-analysis/README.md) for setup and usage.
 |-----|----------|
 | [Claude hooks](docs/claude-hooks.md) | Config, each hook, edge cases, filesystem scope |
 | [Cursor hooks](docs/cursor-hooks.md) | Config, each hook, edge cases, filesystem scope |
+| [log-analysis/README.md](log-analysis/README.md) | Full analysis setup and command reference |
+
+---
+
+## Vision
+
+Longer term, this kit is meant to help you spot inefficiencies, tighten prompts, and move toward more agentic workflows — while building intuition for which models and patterns save time and cost.
+
+Analysis features are still evolving, so feedback and ideas are welcome. If this is useful, consider starring the repo to follow updates.
 
 ---
 
@@ -205,5 +253,3 @@ Contributions are welcome! To get started:
 ## License
 
 See [LICENSE](LICENSE).
-
-Analysis features are still evolving, so feedback and ideas are welcome. If this is useful, consider starring the repo to follow updates.

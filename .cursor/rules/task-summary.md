@@ -1,23 +1,29 @@
-# Claude Code Instructions
+# Task summary (session logging)
 
-## Response Summary Requirement
+## When this rule applies
 
-**When this applies:** Only when **`session_tracking.enabled`** is **`true`** in **`.claude/config.json`** for this project. If it is **`false`** or the key is missing, **do not** follow the structured Summary / Implementation Details rules below for hook logging—respond normally unless the user asks for a summary.
+**Only when** **`session_tracking.enabled`** is **`true`** in **`.cursor/config.json`** (and for the same behavior in Claude Code, **`.claude/config.json`**). Session hooks use the `**Summary:**` block to fill work logs.
 
-If unsure, read `.claude/config.json` in the workspace before assuming the format is required. If the project-level `.claude/config.json` does not exist, fall back to `~/.claude/config.json` (system-level).
+If **`session_tracking.enabled`** is **`false`** or unset, **do not** require the structured `**Summary:**` / Implementation Details format for this project—answer in a normal, concise way unless the user asks for a summary.
+
+If unsure, read `.cursor/config.json` (and `.claude/config.json` when using Claude Code) before applying the rules below. If the project-level config does not exist, fall back to `~/.cursor/config.json` (and `~/.claude/config.json` for Claude Code) at the system level.
 
 ---
+
+## Requirements (only when session tracking is enabled)
 
 When **`session_tracking.enabled`** is **`true`**, and you are responding to task-based requests (coding, debugging, feature implementation, etc.):
 
 1. **Always include summaries for coding tasks** — no exceptions, regardless of response length
-2. **Skip summaries only for**: non-coding task responses that are 2-3 lines or less
+2. **Skip summaries only for**: non-coding task responses (research, questions, explanations) that are 2-3 lines or less
 3. **Format**: "You asked me to [X], here's a summary of what I did: [summary]"
-4. **For all coding tasks**: Add "Implementation Details" section before summary with:
+4. **For coding tasks**: Add "Implementation Details" or "Final Look" section before summary with:
    - Key files changed (with line numbers where relevant)
    - Important changes or decisions made
 5. **Summary length**: One paragraph maximum, concise
-6. **Heading format** (for hook detection): Always use `**Summary:**` as the exact heading
+6. **Heading format** (REQUIRED for hook detection when logging is on): Always use `**Summary:**` as the exact heading — do not use alternatives like "## Summary" or "Summary:"
+
+**Purpose** (when enabled): End-of-day logging of chat responses for work tracking and auditing.
 
 ### Example Format (Coding Task)
 ```
@@ -43,7 +49,7 @@ You asked me to investigate the build failures. I found that the TypeScript conf
 
 ## Interaction Logging Rule
 
-**When this applies:** Only when **`session_tracking.enabled`** is **`true`** in **`.claude/config.json`**.
+**When this applies:** Only when **`session_tracking.enabled`** is **`true`** in **`.cursor/config.json`** (or **`.claude/config.json`** when using Claude Code).
 
 For every user request, append a very short structured summary at the end of your response under the heading:
 
